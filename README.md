@@ -7,7 +7,7 @@
 
 
 ## 🎯 Project Overview
-This engine, developed for my **Engineer's Thesis**, addresses the "Efficiency Gap" in modern Cloud FinOps. While native tools often fall into the "Heuristic Myopia" trap—prioritizing local, immediate savings—this system utilizes **Linear Programming (LP)** to identify the **Global Optimum** for multi-cloud resource allocation.
+This engine addresses the "Efficiency Gap" in modern Cloud FinOps. While native tools often fall into the "Heuristic Myopia" trap—prioritizing local, immediate savings—this system utilizes **Linear Programming (LP)** to identify the **Global Optimum** for multi-cloud resource allocation.
 
 ## 🛑 The Problem: Cloud Complexity & Heuristic Failure
 Modern cloud infrastructure has scaled beyond the cognitive capacity of manual management.
