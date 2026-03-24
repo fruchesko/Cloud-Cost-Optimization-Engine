@@ -27,3 +27,31 @@ The engine’s efficacy was measured by comparing its deterministic output again
 * **Solver Performance**: High-dimensional multi-objective problems were resolved in just **0.0318 seconds**, demonstrating real-time decision-support viability.
 * **Storage ROI**: Identified lifecycle arbitrage and migration opportunities yielding up to a **62.7% TCO reduction**.
 * **Constraint Precision**: Successfully saturated financial and technical boundaries (e.g., utilizing 97.8% of available CAPEX) to minimize operational waste.
+
+## 📈 Visualized Results & Evidence
+
+The model was stress-tested across three levels of complexity to verify its ability to maintain a global optimum under increasingly conflicting constraints.
+
+### 1. Level 1: Isolated Rate Optimization (Scenario 1)
+This baseline test evaluates the engine's ability to balance On-Demand flexibility against Reserved Instance discounts. 
+* **Outcome**: The solver identified the exact saturation point (25 units) required to cover a steady 100 vCPU workload, eliminating the manual "best guess" rounding errors common in heuristic tools.
+
+![Scenario 1 - Rate Optimization](visuals/S1.png)
+
+### 2. Level 2: Advanced Risk & Governance (Scenario 7)
+Moving beyond cost, this scenario introduces a "Risk Budget" limit on Spot instance usage to ensure system stability.
+* **Outcome**: The engine utilized 94% of the allowable risk threshold to drive down unit costs, proving that precise mathematical assignment eliminates the need for expensive, fear-based over-provisioning.
+
+![Scenario 7 - Risk vs Technical Fit](visuals/S7.png)
+
+### 3. Level 3: Storage Lifecycle & ROI (Scenario 13)
+This global optimization scenario calculates the financial break-even point for migrating 180TB of unstructured data across storage tiers.
+* **Outcome**: Identified a massive **62.7% efficiency gain**. The model demonstrated that the one-time migration fee (CAPEX) was offset by monthly savings in under 24 days.
+
+![Scenario 13 - Storage ROI](visuals/S13.png)
+
+### 4. Level 3: The Integrated Master Problem (Scenario 15)
+The final test simulates a large-scale enterprise environment subject to simultaneous, conflicting constraints: a $45K CAPEX limit, Spot Risk ceilings, and mandatory Multi-Cloud provider policies.
+* **Outcome**: Achieved the **Global Optimum with 13.1% ($72.1K) total savings**. While standard scripts failed to find a feasible solution within the budget, the LP solver performed global resource arbitration to satisfy all requirements.
+
+![Scenario 15 - Master Optimization](visuals/S15.png)
