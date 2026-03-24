@@ -54,6 +54,8 @@ This global optimization scenario calculates the financial break-even point for 
 The final test simulates a large-scale enterprise environment subject to simultaneous, conflicting constraints: a $45K CAPEX limit, Spot Risk ceilings, and mandatory Multi-Cloud provider policies.
 * **Outcome**: Achieved the **Global Optimum with 13.1% ($72.1K) total savings**. While standard scripts failed to find a feasible solution within the budget, the LP solver performed global resource arbitration to satisfy all requirements.
 
+![Scenario 15 - Master Optimization](visuals/S15.png)
+
 * ## 🧠 Core Technical Architecture
 The engine treats cloud infrastructure as a multi-dimensional solution space governed by linear inequalities. By navigating the polytope of feasible solutions, it identifies the absolute mathematical floor of expenditure without compromising system resilience.
 
@@ -68,4 +70,21 @@ The engine treats cloud infrastructure as a multi-dimensional solution space gov
 * **/docs**: Contains the full digital version of the Engineer's Thesis (PDF) and the interactive Power BI (.pbix) dashboard files.
 * **/visuals**: High-resolution screenshots of the analytical dashboards and performance benchmarks.
 
-![Scenario 15 - Master Optimization](visuals/S15.png)
+---
+
+## 🛠️ Replication Protocol (Google Colab)
+To replicate the optimization results within a cloud-hosted Python environment, follow these steps:
+
+1. **Install Dependencies**: Execute `!pip install pulp` to initialize the linear programming modeler.
+2. **Environment Setup**: Upload the scripts located in the `/code` directory (or a compressed `project.zip`) to your Colab session.
+3. **Execution**: Run the master orchestration script using `!python main.py`. The engine will sequentially process all 15 scenarios and generate CSV evidence reports for visualization.
+
+---
+
+## 👤 Author Information
+* **Author**: Kyrylo Brykov
+* **Degree**: Bachelor of Science in Information and Communication Technology (ICT)
+* **Institution**: Bydgoszcz University of Science and Technology (Politechnika Bydgoska), 2026
+* **Specialization**: Deterministic Optimization, Cloud FinOps, and Business Intelligence Analytics
+
+---
