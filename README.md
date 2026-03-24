@@ -54,4 +54,18 @@ This global optimization scenario calculates the financial break-even point for 
 The final test simulates a large-scale enterprise environment subject to simultaneous, conflicting constraints: a $45K CAPEX limit, Spot Risk ceilings, and mandatory Multi-Cloud provider policies.
 * **Outcome**: Achieved the **Global Optimum with 13.1% ($72.1K) total savings**. While standard scripts failed to find a feasible solution within the budget, the LP solver performed global resource arbitration to satisfy all requirements.
 
+* ## 🧠 Core Technical Architecture
+The engine treats cloud infrastructure as a multi-dimensional solution space governed by linear inequalities. By navigating the polytope of feasible solutions, it identifies the absolute mathematical floor of expenditure without compromising system resilience.
+
+* **Optimization Engine**: Built in **Python** using the **PuLP** library to model objective functions and constraints.
+* **Algorithmic Core**: Utilizes the **Simplex Algorithm** to search for a global optimum, delegating heavy computation to high-performance C-solvers (CBC/GLPK).
+* **Intelligence Layer**: **Microsoft Power BI** (integrated via DAX) serves as the visualization frontend, transforming raw optimization vectors into actionable business intelligence.
+
+---
+
+## 📂 Repository Structure
+* **/code**: Modular Python scripts implementing the optimization logic for all 15 experimental scenarios.
+* **/docs**: Contains the full digital version of the Engineer's Thesis (PDF) and the interactive Power BI (.pbix) dashboard files.
+* **/visuals**: High-resolution screenshots of the analytical dashboards and performance benchmarks.
+
 ![Scenario 15 - Master Optimization](visuals/S15.png)
