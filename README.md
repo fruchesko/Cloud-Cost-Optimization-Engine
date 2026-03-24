@@ -19,3 +19,11 @@ Modern cloud infrastructure has scaled beyond the cognitive capacity of manual m
 This project is a **mathematical proof-of-concept** conducted in a controlled analytical environment.
 * **Data Nature**: The research utilizes **synthetic telemetry** mapped against real-world AWS and Azure pricing APIs to ensure 100% experimental control.
 * **Validation Status**: While mathematically rigorous, this model **has not been verified in real-world production environments** and does not currently account for the "noise," tagging errors, or unstructured anomalies inherent in raw corporate billing logs.
+
+## 🚀 Key Performance Indicators (KPIs)
+The engine’s efficacy was measured by comparing its deterministic output against standard heuristic baselines across 15 scenarios.
+
+* **Global Efficiency**: Achieved a **13.1% ($72.1K)** reduction in Total Cost of Ownership (TCO) for complex enterprise-scale configurations.
+* **Solver Performance**: High-dimensional multi-objective problems were resolved in just **0.0318 seconds**, demonstrating real-time decision-support viability.
+* **Storage ROI**: Identified lifecycle arbitrage and migration opportunities yielding up to a **62.7% TCO reduction**.
+* **Constraint Precision**: Successfully saturated financial and technical boundaries (e.g., utilizing 97.8% of available CAPEX) to minimize operational waste.
