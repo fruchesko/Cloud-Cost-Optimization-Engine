@@ -37,7 +37,7 @@ Since this project uses multiple files, here is the easiest way to run it in Col
 
 5.  **Unzip and Run:** In the next cell, run this:
     !unzip -o project.zip
-    !python main.py
+    !python Main.py
 
 ## The Output
 When the script finishes running, it will generate a file called:
