@@ -1,6 +1,6 @@
 # main.py
 # --- DIPLOMA THESIS: CLOUD OPTIMIZATION ORCHESTRATOR ---
-# Author: [Your Name]
+# Author: Kyrylo Brykov
 # Description: Central execution script that runs all optimization scenarios 
 # and aggregates results into a single analytical dataset.
 
