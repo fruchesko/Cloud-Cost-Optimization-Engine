@@ -9,7 +9,7 @@ I built a system using Python and Linear Programming (PuLP) that calculates the 
 To keep things clean, I didn't put everything in one giant script. Here is how it breaks down:
 
 ### 1. The Setup
-* **00_environment_setup.py**: This sets up the libraries and creates the empty list where we save our results.
+* **environment_setup.py**: This sets up the libraries and creates the empty list where we save our results.
 
 ### 2. The Scenarios (The Logic)
 Each file represents a specific business problem I solved in the thesis:
