@@ -3,7 +3,11 @@
 GET  /            the web page
 GET  /scenarios   scenarios with their parameters, ranges and defaults
 POST /solve       {"scenario": "...", "params": {...}} -> heuristic vs optimum
+POST /assistant   chat with the "Needs assistant" (suggests settings)
 GET  /health      liveness check
+
+Behind a reverse proxy, set FORWARDED_ALLOW_IPS so per-visitor limits see the
+real client address.
 """
 
 from __future__ import annotations
@@ -16,10 +20,12 @@ import sys
 from pathlib import Path
 from typing import Annotated, Literal, Union
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
+from . import assistant
+from .ratelimit import SlidingWindow
 from .scenarios import PARAM_MODELS, SCENARIOS, describe
 
 SOLVER_TIMEOUT = float(os.environ.get("SOLVER_TIMEOUT_SECONDS", "10"))
@@ -33,6 +39,16 @@ app = FastAPI(
     version="1.0",
 )
 _slots = asyncio.Semaphore(MAX_CONCURRENT)
+
+LIMITS = {
+    "solve": SlidingWindow(int(os.environ.get("SOLVE_PER_IP_PER_MINUTE", "30")), 60),
+    "assistant_ip": SlidingWindow(int(os.environ.get("ASSISTANT_PER_IP_PER_HOUR", "20")), 3600),
+    "assistant_all": SlidingWindow(int(os.environ.get("ASSISTANT_PER_DAY", "300")), 86400),
+}
+
+
+def _client(request: Request) -> str:
+    return request.client.host if request.client else "unknown"
 
 
 def _request_model(sid: str) -> type[BaseModel]:
@@ -103,7 +119,9 @@ async def _run_worker(payload: dict) -> dict:
     503: {"description": "Too many solves running"},
     504: {"description": "Solver timed out"},
 })
-async def solve(req: SolveRequest):
+async def solve(req: SolveRequest, request: Request):
+    if not LIMITS["solve"].allow(_client(request)):
+        return _error(429, "rate_limited", "Too many solves from your address. Wait a minute and try again.")
     if _slots.locked():
         return _error(503, "busy", "Too many solves are running. Try again in a moment.")
     async with _slots:
@@ -121,3 +139,25 @@ async def solve(req: SolveRequest):
                       "Loosen a limit, lower the demand or allow more instance types.",
                       solver_status=out.get("solver_status"))
     return _error(422, out["error"], out["message"])
+
+
+@app.get("/assistant")
+def assistant_info() -> dict:
+    return {"enabled": bool(assistant.API_KEY), "model": assistant.MODEL}
+
+
+@app.post("/assistant", responses={
+    429: {"description": "Per-visitor or daily message limit reached"},
+    503: {"description": "Assistant not configured, out of budget or busy"},
+})
+async def assistant_chat(req: assistant.ChatRequest, request: Request):
+    if not LIMITS["assistant_ip"].allow(_client(request)):
+        return _error(429, "rate_limited", "You've reached the assistant's hourly message limit. "
+                                           "Try again later, or set the inputs by hand.")
+    if not LIMITS["assistant_all"].allow("all"):
+        return _error(429, "rate_limited", "The assistant has reached today's message limit. "
+                                           "Please try again tomorrow.")
+    try:
+        return await assistant.chat(req)
+    except assistant.AssistantError as e:
+        return _error(e.status, e.error, e.message)

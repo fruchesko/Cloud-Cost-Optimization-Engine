@@ -22,7 +22,7 @@
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--ink);
   font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 96px; }
 h1 { font-size: 22px; margin: 0 0 4px; }
 h2 { font-size: 15px; margin: 0 0 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
 .sub { color: var(--muted); margin: 0 0 20px; }
@@ -82,6 +82,34 @@ td.n, th.n { text-align: right; }
 .placeholder { color: var(--muted); padding: 28px 8px; text-align: center; }
 .stale { opacity: .55; }
 .notes { color: var(--muted); font-size: 12.5px; margin: 6px 0 0; padding-left: 16px; }
+
+/* Needs assistant */
+.ai-fab { position: fixed; right: 16px; bottom: 16px; z-index: 20; border: 0; border-radius: 999px;
+  padding: 12px 18px; background: var(--accent); color: var(--accent-ink); font: inherit; font-weight: 600;
+  box-shadow: 0 6px 20px rgba(0,0,0,.18); cursor: pointer; }
+.ai-panel { position: fixed; right: 16px; bottom: 16px; z-index: 21; width: 380px; max-width: calc(100vw - 32px);
+  height: min(600px, calc(100vh - 32px)); display: flex; flex-direction: column; background: var(--panel);
+  border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.25); overflow: hidden; }
+.ai-panel[hidden], .ai-fab[hidden] { display: none; }
+@media (max-width: 520px) { .ai-panel { right: 0; bottom: 0; width: 100vw; max-width: 100vw; height: 85vh; border-radius: 14px 14px 0 0; } }
+.ai-head { display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.ai-head h3 { margin: 0; font-size: 16px; }
+.ai-head p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+.ai-head button { margin-left: auto; border: 0; background: transparent; color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer; padding: 0 4px; }
+.ai-log { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.msg { max-width: 88%; padding: 9px 12px; border-radius: 12px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; }
+.msg.bot { background: var(--chip); align-self: flex-start; border-bottom-left-radius: 4px; }
+.msg.me { background: var(--accent); color: var(--accent-ink); align-self: flex-end; border-bottom-right-radius: 4px; }
+.msg.err { background: var(--warn-bg); color: var(--warn); align-self: stretch; max-width: none; }
+.msg.typing { color: var(--muted); font-style: italic; }
+.sugg { align-self: stretch; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 13.5px; }
+.sugg h4 { margin: 0 0 6px; font-size: 13px; color: var(--muted); font-weight: 600; }
+.sugg ul { margin: 0 0 8px; padding-left: 18px; }
+.sugg .btn { padding: 7px 12px; font-size: 13.5px; }
+.ai-form { display: flex; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--line); }
+.ai-form textarea { flex: 1; resize: none; height: 44px; max-height: 120px; padding: 10px; border: 1px solid var(--line);
+  border-radius: 10px; background: var(--bg); color: var(--ink); font: inherit; font-size: 14px; }
+.ai-note { color: var(--muted); font-size: 11.5px; padding: 0 14px 10px; }
 </style>
 </head>
 <body>
@@ -110,6 +138,20 @@ td.n, th.n { text-align: right; }
     </section>
   </div>
 </main>
+
+<button class="ai-fab" id="ai-open" type="button" hidden>💬 Needs assistant</button>
+<section class="ai-panel" id="ai-panel" role="dialog" aria-label="Needs assistant" hidden>
+  <div class="ai-head">
+    <div><h3>Needs assistant</h3><p>This helps you better understand your needs</p></div>
+    <button type="button" id="ai-close" aria-label="Close">×</button>
+  </div>
+  <div class="ai-log" id="ai-log" aria-live="polite"></div>
+  <form class="ai-form" id="ai-form">
+    <textarea id="ai-input" maxlength="2000" placeholder="Describe the client's workload…" aria-label="Message"></textarea>
+    <button class="btn primary" type="submit" id="ai-send" style="flex:0 0 auto">Send</button>
+  </form>
+  <div class="ai-note">AI suggestions can be wrong; check them before you solve. Don't share confidential data.</div>
+</section>
 
 <script>
 const $ = (s) => document.querySelector(s);
@@ -292,6 +334,104 @@ async function init() {
   $("#reset").onclick = () => select(current.id);
 }
 init();
+
+// ---- Needs assistant ----
+const ai = { history: [], busy: false };
+const aiLog = $("#ai-log");
+
+function aiAdd(cls, text) {
+  const el = document.createElement("div");
+  el.className = `msg ${cls}`; el.textContent = text;
+  aiLog.appendChild(el); aiLog.scrollTop = aiLog.scrollHeight;
+  return el;
+}
+
+function fmtParam(p, v) {
+  if (p.kind === "multi") return v.join(", ");
+  if (p.kind === "choice") return v;
+  if (isPct(p)) return `${num(v * 100)}%`;
+  return `${num(v)} ${p.unit === "$" ? "USD" : p.unit}`;
+}
+
+function aiSuggestion(sug) {
+  const sc = catalog.find((s) => s.id === sug.scenario);
+  if (!sc) return;
+  const box = document.createElement("div");
+  box.className = "sugg";
+  const items = Object.entries(sug.params).map(([k, v]) => {
+    const p = sc.parameters.find((x) => x.name === k);
+    return `<li>${esc(p.label)}: <b>${esc(fmtParam(p, v))}</b></li>`;
+  }).join("");
+  box.innerHTML = `<h4>Suggested settings · ${esc(sc.name)}</h4><ul>${items}</ul>
+    <button class="btn primary" type="button">Apply settings</button>`;
+  box.querySelector("button").onclick = () => {
+    if (current.id !== sc.id) select(sc.id);
+    for (const [k, v] of Object.entries(sug.params)) {
+      const p = sc.parameters.find((x) => x.name === k);
+      const el = $(`.param[data-name="${k}"]`);
+      if (!p || !el) continue;
+      if (p.kind === "multi") el.querySelectorAll("input").forEach((i) => i.checked = v.includes(i.value));
+      else if (p.kind === "choice") el.querySelector("select").value = v;
+      else {
+        const vv = toView(p, v);
+        el.querySelector("input[type=number]").value = vv;
+        el.querySelector("input[type=range]").value = vv;
+      }
+      changed(el);
+    }
+    box.querySelector("button").textContent = "Applied ✓";
+    aiAdd("bot", "Applied. Press Solve to compare the baseline with the optimum.");
+  };
+  aiLog.appendChild(box); aiLog.scrollTop = aiLog.scrollHeight;
+}
+
+async function aiSend(ev) {
+  ev.preventDefault();
+  const input = $("#ai-input"), text = input.value.trim();
+  if (!text || ai.busy) return;
+  ai.busy = true; $("#ai-send").disabled = true; input.value = "";
+  aiAdd("me", text);
+  ai.history.push({ role: "user", content: text });
+  const typing = aiAdd("bot typing", "Thinking…");
+  try {
+    const { params } = readParams();
+    const res = await fetch("assistant", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: ai.history.slice(-20), scenario: current?.id, params }) });
+    const body = await res.json().catch(() => ({}));
+    typing.remove();
+    if (!res.ok) {
+      ai.history.pop();
+      aiAdd("err", body.message || (Array.isArray(body.detail) ? "That message is too long." : `Something went wrong (HTTP ${res.status}).`));
+      return;
+    }
+    aiAdd("bot", body.reply);
+    ai.history.push({ role: "assistant", content: body.reply });
+    if (body.suggestion) aiSuggestion(body.suggestion);
+  } catch (e) {
+    typing.remove(); ai.history.pop();
+    aiAdd("err", "Could not reach the assistant. Check your connection and try again.");
+  } finally {
+    ai.busy = false; $("#ai-send").disabled = false; input.focus();
+  }
+}
+
+(async function aiInit() {
+  try {
+    const info = await (await fetch("assistant")).json();
+    if (!info.enabled) return;
+  } catch { return; }
+  const open = $("#ai-open"), panel = $("#ai-panel");
+  open.hidden = false;
+  open.onclick = () => { panel.hidden = false; open.hidden = true; $("#ai-input").focus(); };
+  $("#ai-close").onclick = () => { panel.hidden = true; open.hidden = false; };
+  $("#ai-form").onsubmit = aiSend;
+  $("#ai-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("#ai-form").requestSubmit(); }
+  });
+  aiAdd("bot", "Hi! Tell me about your client's workload: roughly how much compute and memory it needs, " +
+    "whether there's money to pay upfront, how much interruption risk is acceptable, and any cloud policy. " +
+    "I'll suggest settings you can apply with one click.");
+})();
 </script>
 </body>
 </html>

@@ -6,9 +6,23 @@ services:
     restart: unless-stopped
     ports:
       - "${COST_ENGINE_PORT:-8090}:8000"
+    env_file:
+      # LITELLM_API_KEY for the Needs assistant (see .env.example). Optional:
+      # without it the assistant is hidden and the rest works.
+      - path: .env
+        required: false
     environment:
       SOLVER_TIMEOUT_SECONDS: "10"
       MAX_CONCURRENT_SOLVES: "4"
+      SOLVE_PER_IP_PER_MINUTE: "30"
+      LITELLM_BASE_URL: "${LITELLM_BASE_URL:-http://litellm:4000/v1}"
+      ASSISTANT_MODEL: "gpt-6-luna"
+      ASSISTANT_PER_IP_PER_HOUR: "20"
+      ASSISTANT_PER_DAY: "300"
+      # Requests proxied from the host (e.g. Tailscale Funnel) arrive from a
+      # Docker bridge address; trust X-Forwarded-For only from those.
+      FORWARDED_ALLOW_IPS: "172.16.0.0/12"
+    networks: [default, ai-poc]
     read_only: true
     tmpfs:
       - /tmp
@@ -17,3 +31,9 @@ services:
     mem_limit: 512m
     cpus: 1.0
     pids_limit: 128
+
+networks:
+  # Shared with the LiteLLM gateway (hostname "litellm"). Create it with
+  # `docker network create ai-poc` if you run the app without the gateway.
+  ai-poc:
+    external: true

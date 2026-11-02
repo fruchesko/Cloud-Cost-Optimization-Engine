@@ -116,6 +116,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8090
 | `GET /` | the web page |
 | `GET /scenarios` | scenarios with each parameter's range and default |
 | `POST /solve` | `{"scenario": "scenario_15", "params": {"max_capex": 60000}}`; omitted parameters use the thesis values |
+| `POST /assistant` | `{"messages": [{"role": "user", "content": "..."}], "scenario": "...", "params": {...}}` → reply and validated suggestion |
 | `GET /docs` | interactive API documentation |
 
 `POST /solve` returns 422 with `"error": "infeasible"` when no allocation meets the
@@ -123,8 +124,19 @@ constraints, 422 with field details for out-of-range inputs, and 504 if the solv
 runs longer than `SOLVER_TIMEOUT_SECONDS` (default 10). `allowed_instances` limits
 the types the optimizer may use; the baseline keeps its standard types.
 
-The app has no login: keep it on a trusted network. Set `COST_ENGINE_PORT` to use
-a port other than 8090.
+### Needs assistant
+
+A chat window ("This helps you better understand your needs") turns a client's
+description into suggested settings that can be applied with one click. It calls
+`gpt-6-luna` through a LiteLLM gateway: put the gateway key in `.env` as
+`LITELLM_API_KEY` (see `.env.example`); without it the assistant is hidden.
+Suggestions are validated against the same ranges as `/solve`. Limits: 20
+messages per visitor per hour, 300 per day, 600 tokens per reply, and the key's
+own budget in LiteLLM.
+
+The app has no login. Set `COST_ENGINE_PORT` to use a port other than 8090, and
+`FORWARDED_ALLOW_IPS` to your reverse proxy's address so per-visitor limits see
+real client addresses.
 
 Tests: `pip install -r requirements-dev.txt && pytest`.
 
