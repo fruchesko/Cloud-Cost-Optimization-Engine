@@ -69,6 +69,9 @@ The engine treats cloud infrastructure as a multi-dimensional solution space gov
 * **/code**: Modular Python scripts implementing the optimization logic for all 15 experimental scenarios.
 * **/docs**: Contains the full digital version of the Engineer's Thesis (PDF) and the interactive Power BI (.pbix) dashboard files.
 * **/visuals**: High-resolution screenshots of the analytical dashboards and performance benchmarks.
+* **/engine**: Scenarios 1 and 15 as importable functions with parameters (thesis values as defaults).
+* **/app**: Web app and HTTP API on top of `/engine`.
+* **/tests**: pytest suite for the engine and the app.
 
 ---
 
@@ -90,6 +93,40 @@ The engine processes all 15 scenarios in sequence and writes the results to `Dip
 1. **Install Dependencies**: Upload `requirements.txt` and run `!pip install -r requirements.txt` (installs `pandas` and `pulp<3`).
 2. **Environment Setup**: Upload all `.py` files from the `/code` directory (or a compressed `project.zip` of them, then `!unzip -o project.zip`) to your Colab session.
 3. **Execution**: Run `!python Main.py` (the file name is case-sensitive). The results are written to `Diploma_Optimization_Results_FINAL.csv`.
+
+---
+
+## 🖥️ Web App
+
+A small web page and API for Scenarios 1 and 15: adjust the inputs, solve, and
+compare the heuristic baseline with the optimum.
+
+```bash
+docker compose up -d --build      # then open http://<server>:8090
+```
+
+Or without Docker:
+```bash
+pip install -r requirements-app.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8090
+```
+
+| Endpoint | |
+|---|---|
+| `GET /` | the web page |
+| `GET /scenarios` | scenarios with each parameter's range and default |
+| `POST /solve` | `{"scenario": "scenario_15", "params": {"max_capex": 60000}}`; omitted parameters use the thesis values |
+| `GET /docs` | interactive API documentation |
+
+`POST /solve` returns 422 with `"error": "infeasible"` when no allocation meets the
+constraints, 422 with field details for out-of-range inputs, and 504 if the solver
+runs longer than `SOLVER_TIMEOUT_SECONDS` (default 10). `allowed_instances` limits
+the types the optimizer may use; the baseline keeps its standard types.
+
+The app has no login: keep it on a trusted network. Set `COST_ENGINE_PORT` to use
+a port other than 8090.
+
+Tests: `pip install -r requirements-dev.txt && pytest`.
 
 ---
 

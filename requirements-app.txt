@@ -1,0 +1,4 @@
+# Web app (app/). Pinned for reproducible Docker builds.
+pulp==2.9.0
+fastapi==0.162.0
+uvicorn==0.54.0

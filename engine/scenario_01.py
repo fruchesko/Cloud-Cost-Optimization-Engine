@@ -26,10 +26,12 @@ def run(
     instances: Mapping[str, Mapping] | None = None,
     heuristic_instance: str = "Instance_RI_1YR",
     hours: int = HOURS_IN_3_YEARS,
+    baseline_instances: Mapping[str, Mapping] | None = None,
 ) -> ScenarioResult:
     """Run Scenario 1. Defaults are the thesis inputs.
 
-    Heuristic baseline: cover all vCPUs with ``heuristic_instance`` (1-year RIs).
+    Heuristic baseline: cover all vCPUs with ``heuristic_instance`` (1-year RIs),
+    looked up in ``baseline_instances`` (default: ``instances``).
     Raises InfeasibleError if no mix of instances meets the demand.
     """
     if required_vcpus < 0 or required_ram_gb < 0:
@@ -42,7 +44,7 @@ def run(
     }
     status, optimal, chosen, checks = solve(NAME, instances, constraints, hours)
 
-    h = instances[heuristic_instance]
+    h = (instances if baseline_instances is None else baseline_instances)[heuristic_instance]
     heuristic = tco(h, math.ceil(required_vcpus / h["vCPU"]), hours)
 
     return build_result(NAME, status, heuristic, optimal, chosen, checks)

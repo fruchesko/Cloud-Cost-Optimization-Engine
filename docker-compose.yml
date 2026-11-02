@@ -1,0 +1,19 @@
+services:
+  cost-engine:
+    build: .
+    image: cost-engine:latest
+    container_name: cost-engine
+    restart: unless-stopped
+    ports:
+      - "${COST_ENGINE_PORT:-8090}:8000"
+    environment:
+      SOLVER_TIMEOUT_SECONDS: "10"
+      MAX_CONCURRENT_SOLVES: "4"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 128

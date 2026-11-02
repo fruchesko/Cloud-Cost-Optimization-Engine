@@ -65,10 +65,12 @@ def run(
     min_azure_pct: float = 0.35,
     instances: Mapping[str, Mapping] | None = None,
     hours: int = HOURS_IN_3_YEARS,
+    baseline_instances: Mapping[str, Mapping] | None = None,
 ) -> ScenarioResult:
     """Run Scenario 15. Defaults are the thesis inputs.
 
-    Spot and Azure limits are fractions of ``required_vcpu``.
+    Spot and Azure limits are fractions of ``required_vcpu``. The baseline's
+    instance types are looked up in ``baseline_instances`` (default: ``instances``).
     Raises InfeasibleError if the constraints cannot all be met.
     """
     if min(required_vcpu, required_ram, required_iops, max_capex) < 0:
@@ -93,6 +95,7 @@ def run(
     }
     status, optimal, chosen, checks = solve(NAME, instances, constraints, hours)
 
-    heuristic = heuristic_cost(required_vcpu, max_capex, min_azure_pct, instances, hours=hours)
+    baseline = instances if baseline_instances is None else baseline_instances
+    heuristic = heuristic_cost(required_vcpu, max_capex, min_azure_pct, baseline, hours=hours)
 
     return build_result(NAME, status, heuristic, optimal, chosen, checks)
