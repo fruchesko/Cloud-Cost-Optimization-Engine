@@ -33,7 +33,7 @@ Since this project uses multiple files, here is the easiest way to run it in Col
 2.  **Open Colab:** Go to Google Colab and create a new notebook.
 3.  **Upload:** Click the folder icon on the left and drag your zip file there.
 4.  **Install the Solver:** In the first code cell, run this to install the math library:
-    !pip install pulp
+    !pip install pandas "pulp<3"
 
 5.  **Unzip and Run:** In the next cell, run this:
     !unzip -o project.zip
@@ -41,7 +41,7 @@ Since this project uses multiple files, here is the easiest way to run it in Col
 
 ## The Output
 When the script finishes running, it will generate a file called:
-**Diploma_Cloud_Optimization_Evidence.csv**
+**Diploma_Optimization_Results_FINAL.csv**
 
 You can download this file. It contains the data rows for every scenario, showing exactly how much money was saved and which servers were selected.
 

@@ -72,12 +72,24 @@ The engine treats cloud infrastructure as a multi-dimensional solution space gov
 
 ---
 
-## 🛠️ Replication Protocol (Google Colab)
-To replicate the optimization results within a cloud-hosted Python environment, follow these steps:
+## 🛠️ Replication Protocol
 
-1. **Install Dependencies**: Execute `!pip install pulp` to initialize the linear programming modeler.
-2. **Environment Setup**: Upload the scripts located in the `/code` directory (or a compressed `project.zip`) to your Colab session.
-3. **Execution**: Run the master orchestration script using `!python main.py`. The engine will sequentially process all 15 scenarios and generate CSV evidence reports for visualization.
+### Local (Python 3)
+```bash
+git clone https://github.com/fruchesko/Cloud-Cost-Optimization-Engine.git
+cd Cloud-Cost-Optimization-Engine
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cd code
+python Main.py
+```
+The engine processes all 15 scenarios in sequence and writes the results to `Diploma_Optimization_Results_FINAL.csv` in the `code` directory.
+
+### Google Colab
+1. **Install Dependencies**: Upload `requirements.txt` and run `!pip install -r requirements.txt` (installs `pandas` and `pulp<3`).
+2. **Environment Setup**: Upload all `.py` files from the `/code` directory (or a compressed `project.zip` of them, then `!unzip -o project.zip`) to your Colab session.
+3. **Execution**: Run `!python Main.py` (the file name is case-sensitive). The results are written to `Diploma_Optimization_Results_FINAL.csv`.
 
 ---
 

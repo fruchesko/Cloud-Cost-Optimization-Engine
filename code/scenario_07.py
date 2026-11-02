@@ -2,7 +2,7 @@
 import math
 from pulp import *
 
-def run_scenario_06(results_list):
+def run_scenario_07(results_list):
     print("--- Running Scenario 6: Financial Right-Sizing ---")
     
     model = LpProblem("L2_Scenario_6_Financial_Right_Sizing", LpMinimize)
