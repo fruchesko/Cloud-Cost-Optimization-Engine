@@ -136,7 +136,8 @@ own budget in LiteLLM.
 
 The app has no login. Set `COST_ENGINE_PORT` to use a port other than 8090, and
 `FORWARDED_ALLOW_IPS` to your reverse proxy's address so per-visitor limits see
-real client addresses.
+real client addresses. Every response carries security headers (CSP, HSTS,
+X-Frame-Options) and request bodies over 64 KB (`MAX_BODY_BYTES`) get a 413.
 
 Tests: `pip install -r requirements-dev.txt && pytest`.
 

@@ -107,3 +107,33 @@ def test_solver_timeout_returns_504(monkeypatch):
     r = solve("scenario_15")
     assert r.status_code == 504
     assert r.json()["error"] == "timeout"
+
+
+def test_security_headers_on_page_and_api():
+    for path in ("/", "/scenarios", "/static/app.js"):
+        h = client.get(path).headers
+        assert "script-src 'self'" in h["content-security-policy"]
+        assert "frame-ancestors 'none'" in h["content-security-policy"]
+        assert h["x-frame-options"] == "DENY"
+        assert h["x-content-type-options"] == "nosniff"
+        assert "max-age" in h["strict-transport-security"]
+    assert "content-security-policy" not in client.get("/docs").headers
+
+
+def test_page_has_no_inline_script():
+    page = client.get("/").text
+    assert "<script>" not in page and 'src="static/app.js"' in page
+
+
+def test_oversized_body_is_rejected():
+    big = '{"scenario": "scenario_01", "params": {"x": "' + "a" * 70_000 + '"}}'
+    r = client.post("/solve", content=big, headers={"content-type": "application/json"})
+    assert r.status_code == 413 and r.json()["error"] == "too_large"
+
+
+def test_oversized_chunked_body_is_rejected():
+    def chunks():
+        for _ in range(20):
+            yield b"a" * 8192
+    r = client.post("/assistant", content=chunks(), headers={"content-type": "application/json"})
+    assert r.status_code == 413

@@ -22,10 +22,12 @@ from typing import Annotated, Literal, Union
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
 from . import assistant
 from .ratelimit import SlidingWindow
+from .security import SecurityMiddleware
 from .scenarios import PARAM_MODELS, SCENARIOS, describe
 
 SOLVER_TIMEOUT = float(os.environ.get("SOLVER_TIMEOUT_SECONDS", "10"))
@@ -38,6 +40,8 @@ app = FastAPI(
     description="Compare the thesis heuristic baselines with the LP optimum.",
     version="1.0",
 )
+app.add_middleware(SecurityMiddleware, max_body=int(os.environ.get("MAX_BODY_BYTES", str(64 * 1024))))
+app.mount("/static", StaticFiles(directory=STATIC), name="static")
 _slots = asyncio.Semaphore(MAX_CONCURRENT)
 
 LIMITS = {
