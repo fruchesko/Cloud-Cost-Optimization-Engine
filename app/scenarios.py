@@ -13,9 +13,9 @@ from typing import Any, Callable, List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, create_model
 
-from engine import run_scenario_01, run_scenario_15
-from engine import scenario_01, scenario_15
-from engine._common import HOURS_IN_3_YEARS
+from engine import run_scenario_01, run_scenario_13, run_scenario_15
+from engine import scenario_01, scenario_13, scenario_15
+from engine._common import HOURS_IN_3_YEARS, tco
 
 # Not an engine argument: limits which instance types the optimizer may use.
 ALLOWED = "allowed_instances"
@@ -41,9 +41,65 @@ class Scenario:
     name: str
     description: str
     run: Callable
-    instances: dict
+    instances: dict           # the catalogue the optimizer picks from
     params: tuple
     notes: tuple = ()
+    catalog_arg: str = "instances"   # engine argument names for the catalogue
+    baseline_arg: str = "baseline_instances"
+    cost_period: str = "over the planning horizon"
+    columns: tuple = ()        # (key, label, format) for the resources table
+    rows: Optional[Callable] = None    # (scenario, result, params) -> list of row dicts
+    comparisons: Optional[Callable] = None  # (result) -> [{label, baseline, optimal}]
+
+
+_PRICING = {"OD": "On-Demand", "RI-1YR": "Reserved 1-yr", "RI-3YR": "Reserved 3-yr"}
+
+
+def _pricing(spec: dict) -> str:
+    if "type" in spec:
+        return _PRICING.get(spec["type"], spec["type"])
+    if spec.get("spot"):
+        return "Spot"
+    return "Reserved" if spec["upfront"] else "On-Demand"
+
+
+COMPUTE_COLUMNS = (("name", "Instance", "text"), ("provider", "Cloud", "text"),
+                   ("type", "Pricing", "text"), ("count", "Count", "num"),
+                   ("vcpu", "vCPU", "num"), ("ram_gb", "RAM GB", "num"),
+                   ("total_cost", "Total cost", "money"))
+
+
+def compute_rows(s: "Scenario", r, params: dict) -> list[dict]:
+    hours = params.get("hours", HOURS_IN_3_YEARS)
+    rows = []
+    for name, count in r.instances.items():
+        spec = s.instances[name]
+        rows.append({
+            "name": name, "provider": spec.get("prov"), "type": _pricing(spec),
+            "count": count, "vcpu": count * spec["vCPU"],
+            "ram_gb": count * spec.get("RAM", spec.get("RAM_GB", 0)),
+            "total_cost": tco(spec, count, hours),
+        })
+    return sorted(rows, key=lambda x: -x["total_cost"])
+
+
+STORAGE_COLUMNS = (("name", "Tier", "text"), ("type", "Class", "text"),
+                   ("gb", "Volume GB", "num"), ("iops", "IOPS", "num"),
+                   ("monthly_cost", "Per month", "money"), ("migration_cost", "Migration (one-time)", "money"))
+
+
+def storage_rows(s: "Scenario", r, params: dict) -> list[dict]:
+    rows = []
+    for name, gb in r.instances.items():
+        t = s.instances[name]
+        rows.append({"name": name, "type": t["type"], "gb": gb, "iops": gb * t["iops"],
+                     "monthly_cost": gb * t["opex"], "migration_cost": gb * t["capex"]})
+    return sorted(rows, key=lambda x: -x["monthly_cost"])
+
+
+def storage_comparisons(r) -> list[dict]:
+    return [{"label": "One-time migration cost", "baseline": r.extras["baseline_capex"],
+             "optimal": r.extras["optimal_capex"]}]
 
 
 def _hours() -> Param:
@@ -78,6 +134,34 @@ SCENARIOS: dict[str, Scenario] = {
         ),
         notes=("The baseline sizes for vCPUs only, as in the thesis. If RAM needs more "
                "instances than vCPUs do, the baseline can look cheaper than the optimum.",),
+        columns=COMPUTE_COLUMNS, rows=compute_rows,
+    ),
+    "scenario_13": Scenario(
+        id="scenario_13",
+        name=scenario_13.NAME,
+        description="Spread a data volume across hot, cool and archive storage to cut the "
+                    "monthly bill, while meeting an IOPS requirement and a budget for the "
+                    "one-time migration cost.",
+        run=run_scenario_13,
+        instances=scenario_13.DEFAULT_TIERS,
+        params=(
+            Param("required_volume_gb", "Data volume", "int", 500_000, 1_000, 2_000_000, 1_000, "GB",
+                  "Minimum amount of data to store (500,000 GB = 500 TB)."),
+            Param("required_iops", "Required IOPS", "int", 25_000, 0, 200_000, 500, "IOPS",
+                  "Total read/write operations per second the storage must sustain."),
+            Param("max_capex", "Migration budget (CAPEX)", "int", 80_000, 0, 500_000, 1_000, "$",
+                  "Most that may be spent once on moving data into the tiers (per GB fee)."),
+            Param(ALLOWED, "Allowed storage tiers", "multi", tuple(scenario_13.DEFAULT_TIERS),
+                  help="Tiers the optimizer may use. The baseline always splits 50/50 "
+                       "between Hot and Cool, as in the thesis.",
+                  choices=tuple(scenario_13.DEFAULT_TIERS)),
+        ),
+        notes=("Costs are per month. The baseline is the thesis's \"active tiers only\" "
+               "rule: half the data in Hot, half in Cool, with no IOPS or budget check.",
+               "The data volume is a minimum: if it's cheaper, the optimizer may store "
+               "more in a slow tier to reach the IOPS target.",),
+        catalog_arg="tiers", baseline_arg="baseline_tiers", cost_period="per month",
+        columns=STORAGE_COLUMNS, rows=storage_rows, comparisons=storage_comparisons,
     ),
     "scenario_15": Scenario(
         id="scenario_15",
@@ -103,6 +187,7 @@ SCENARIOS: dict[str, Scenario] = {
         notes=("The baseline is the thesis's siloed rule: Azure On-Demand for the Azure "
                "share, then AWS Reserved up to the budget, then AWS On-Demand. It only "
                "sizes for vCPUs and never uses Spot.",),
+        columns=COMPUTE_COLUMNS, rows=compute_rows,
     ),
 }
 
@@ -142,6 +227,7 @@ def describe(s: Scenario) -> dict:
         "name": s.name,
         "description": s.description,
         "notes": list(s.notes),
+        "cost_period": s.cost_period,
         "parameters": [
             {k: v for k, v in asdict(p).items() if v not in (None, "", ())}
             for p in s.params

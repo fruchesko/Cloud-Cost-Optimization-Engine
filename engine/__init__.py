@@ -7,6 +7,7 @@ are the defaults) and returns a ScenarioResult. The original scripts in
 
 from ._common import ConstraintCheck, InfeasibleError, ScenarioResult
 from .scenario_01 import run as run_scenario_01
+from .scenario_13 import run as run_scenario_13
 from .scenario_15 import run as run_scenario_15
 
 __all__ = [
@@ -14,5 +15,6 @@ __all__ = [
     "InfeasibleError",
     "ScenarioResult",
     "run_scenario_01",
+    "run_scenario_13",
     "run_scenario_15",
 ]

@@ -130,32 +130,41 @@ async function solve(ev) {
   }
 }
 
+function cell(v, format) {
+  if (v === null || v === undefined || v === "") return "";
+  if (format === "money") return money(v);
+  if (format === "num") return num(v);
+  return esc(v);
+}
+
 function renderResult(r) {
   const hi = Math.max(r.heuristic_cost, r.optimal_cost) || 1;
   const pct = (v) => (v / hi * 100).toFixed(1);
-  const saved = r.savings >= 0;
-  const banner = saved
-    ? `<div class="banner good"><div class="big">${money(r.savings)} saved (${r.savings_pct.toFixed(1)}%)</div>
-       <p>The optimum costs ${money(r.optimal_cost)} against ${money(r.heuristic_cost)} for the baseline.</p></div>`
-    : `<div class="banner warn"><b>The baseline is ${money(-r.savings)} cheaper here, but it does not meet the demand.</b>
-       <p>The baseline only sizes for vCPUs, so it ignores the RAM${current.id === "scenario_15" ? ", IOPS" : ""} you asked for. The optimum is the cheapest plan that actually meets every requirement.</p></div>`;
+  const per = r.cost_period === "per month" ? " / month" : "";
+  const banner = r.savings >= 0
+    ? `<div class="banner good"><div class="big">${money(r.savings)}${per} saved (${r.savings_pct.toFixed(1)}%)</div>
+       <p>The optimum costs ${money(r.optimal_cost)}${per} against ${money(r.heuristic_cost)}${per} for the baseline${per ? "" : ", " + esc(r.cost_period)}.</p></div>`
+    : `<div class="banner warn"><b>The baseline is ${money(-r.savings)}${per} cheaper here, but it does not meet every requirement.</b>
+       <p>The thesis baseline is a rule of thumb that doesn't check all the limits you set (see the notes under the inputs). The optimum is the cheapest plan that actually meets every requirement.</p></div>`;
 
-  const hasProv = r.resources.some((x) => x.provider);
-  const rows = r.resources.map((x) => `<tr><td>${esc(x.name)}</td>${hasProv ? `<td>${esc(x.provider)}</td>` : ""}<td>${esc(x.type)}</td>
-    <td class="n">${num(x.count)}</td><td class="n">${num(x.count * x.vcpu_each)}</td><td class="n">${num(x.count * x.ram_gb_each)}</td>
-    <td class="n">${money(x.total_cost)}</td></tr>`).join("");
+  // Show only columns that have a value in some row (e.g. no "Cloud" for single-cloud scenarios).
+  const cols = r.resource_columns.filter((c) => r.resources.some((x) => x[c.key] !== null && x[c.key] !== undefined && x[c.key] !== ""));
+  const head = cols.map((c) => `<th${c.format === "text" ? "" : ' class="n"'}>${esc(c.label)}</th>`).join("");
+  const rows = r.resources.map((x) => `<tr>${cols.map((c) => `<td${c.format === "text" ? "" : ' class="n"'}>${cell(x[c.key], c.format)}</td>`).join("")}</tr>`).join("");
+  const comps = (r.comparisons || []).map((c) => `<tr><td>${esc(c.label)}</td><td class="n">${money(c.baseline)}</td><td class="n">${money(c.optimal)}</td></tr>`).join("");
   const cons = r.constraints.map((c) => `<tr><td>${esc(pretty(c.name))}</td>
     <td class="n">${num(c.lhs)}</td><td class="n">${c.sense === ">=" ? "≥" : "≤"} ${num(c.rhs)}</td><td class="n">${num(c.slack)}</td>
     <td>${c.binding ? '<span class="chip on">binding</span>' : '<span class="chip">slack</span>'}</td></tr>`).join("");
 
   $("#result").innerHTML = `
     <div class="cards">
-      <div class="card base"><div class="k">Heuristic baseline</div><div class="v">${money(r.heuristic_cost)}</div><div class="bar"><i style="width:${pct(r.heuristic_cost)}%"></i></div></div>
-      <div class="card opt"><div class="k">Optimum (LP)</div><div class="v">${money(r.optimal_cost)}</div><div class="bar"><i style="width:${pct(r.optimal_cost)}%"></i></div></div>
+      <div class="card base"><div class="k">Heuristic baseline${per}</div><div class="v">${money(r.heuristic_cost)}</div><div class="bar"><i style="width:${pct(r.heuristic_cost)}%"></i></div></div>
+      <div class="card opt"><div class="k">Optimum (LP)${per}</div><div class="v">${money(r.optimal_cost)}</div><div class="bar"><i style="width:${pct(r.optimal_cost)}%"></i></div></div>
     </div>
     ${banner}
+    ${comps ? `<div class="section"><div class="table-wrap"><table><thead><tr><th></th><th class="n">Baseline</th><th class="n">Optimum</th></tr></thead><tbody>${comps}</tbody></table></div></div>` : ""}
     <div class="section"><h2>Chosen resources</h2><div class="table-wrap"><table>
-      <thead><tr><th>Instance</th>${hasProv ? "<th>Cloud</th>" : ""}<th>Pricing</th><th class="n">Count</th><th class="n">vCPU</th><th class="n">RAM GB</th><th class="n">Total cost</th></tr></thead>
+      <thead><tr>${head}</tr></thead>
       <tbody>${rows}</tbody></table></div></div>
     <div class="section"><h2>Constraints</h2><div class="table-wrap"><table>
       <thead><tr><th>Constraint</th><th class="n">Plan uses</th><th class="n">Limit</th><th class="n">Room left</th><th></th></tr></thead>

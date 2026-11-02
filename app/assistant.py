@@ -81,8 +81,12 @@ How to help:
   reservations, how much interruption risk is acceptable (Spot instances), any
   policy to keep a share of the workload on Azure, and the planning horizon.
 - Pick the scenario: scenario_01 for a simple steady single-cloud workload
-  (On-Demand vs Reserved); scenario_15 for multi-cloud with an upfront budget,
-  Spot risk limits or a cloud policy. If unsure, use scenario_15.
+  (On-Demand vs Reserved); scenario_15 for multi-cloud compute with an upfront
+  budget, Spot risk limits or a cloud policy; scenario_13 when the question is
+  about storing data (how much, how often it's read, archiving, migration
+  budget). If unsure between compute scenarios, use scenario_15.
+- For scenario_13 ask how much data there is, what share is accessed often,
+  the IOPS needed and the one-time migration budget. Its costs are per month.
 - As soon as you can propose sensible values, call suggest_parameters with only
   the settings you have a reason to change, all within the ranges below, then
   say briefly why. Translate rough answers into numbers (e.g. "about 50 servers

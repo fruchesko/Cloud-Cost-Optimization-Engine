@@ -69,7 +69,7 @@ The engine treats cloud infrastructure as a multi-dimensional solution space gov
 * **/code**: Modular Python scripts implementing the optimization logic for all 15 experimental scenarios.
 * **/docs**: Contains the full digital version of the Engineer's Thesis (PDF) and the interactive Power BI (.pbix) dashboard files.
 * **/visuals**: High-resolution screenshots of the analytical dashboards and performance benchmarks.
-* **/engine**: Scenarios 1 and 15 as importable functions with parameters (thesis values as defaults).
+* **/engine**: Scenarios 1, 13 and 15 as importable functions with parameters (thesis values as defaults).
 * **/app**: Web app and HTTP API on top of `/engine`.
 * **/tests**: pytest suite for the engine and the app.
 
@@ -98,7 +98,7 @@ The engine processes all 15 scenarios in sequence and writes the results to `Dip
 
 ## 🖥️ Web App
 
-A small web page and API for Scenarios 1 and 15: adjust the inputs, solve, and
+A small web page and API for Scenarios 1, 13 and 15: adjust the inputs, solve, and
 compare the heuristic baseline with the optimum.
 
 ```bash

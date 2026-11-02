@@ -137,3 +137,27 @@ def test_oversized_chunked_body_is_rejected():
             yield b"a" * 8192
     r = client.post("/assistant", content=chunks(), headers={"content-type": "application/json"})
     assert r.status_code == 413
+
+
+def test_scenario_13_defaults_match_thesis():
+    body = solve("scenario_13").json()
+    assert body["cost_period"] == "per month"
+    assert body["heuristic_cost"] == pytest.approx(8_875.00, abs=0.005)
+    assert body["optimal_cost"] == pytest.approx(3_310.34, abs=0.005)
+    assert round(body["savings_pct"], 1) == 62.7
+    assert [c["key"] for c in body["resource_columns"]][:3] == ["name", "type", "gb"]
+    assert {r["name"] for r in body["resources"]} == {"Hot_Standard", "Archive_Glacier"}
+    assert sum(r["monthly_cost"] for r in body["resources"]) == pytest.approx(body["optimal_cost"])
+    assert body["comparisons"][0]["baseline"] == pytest.approx(112_500)
+
+
+def test_scenario_13_infeasible_and_validation():
+    r = solve("scenario_13", allowed_instances=["Archive_Glacier"], max_capex=20_000)
+    assert r.status_code == 422 and r.json()["error"] == "infeasible"
+    assert solve("scenario_13", required_volume_gb=10).status_code == 422
+    assert solve("scenario_13", hours=8760).status_code == 422  # not a Scenario 13 input
+
+
+def test_scenarios_lists_three():
+    ids = [s["id"] for s in client.get("/scenarios").json()["scenarios"]]
+    assert ids == ["scenario_01", "scenario_13", "scenario_15"]

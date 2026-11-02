@@ -44,8 +44,9 @@ class ScenarioResult:
     optimal_cost: float
     savings: float
     savings_pct: float
-    instances: dict[str, int]
+    instances: dict[str, float]  # instance counts, or GB per tier for storage
     constraints: dict[str, ConstraintCheck] = field(default_factory=dict)
+    extras: dict[str, float] = field(default_factory=dict)  # scenario-specific figures
 
     @property
     def binding_constraints(self) -> list[str]:
