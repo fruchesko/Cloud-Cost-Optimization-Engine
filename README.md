@@ -1,152 +1,204 @@
-# Cloud Cost Optimization Engine: Deterministic Multi-Cloud Allocation
+# Cloud Cost Optimization Engine
 
-![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
-![Power Bi](https://img.shields.io/badge/power_bi-F2C811?style=for-the-badge&logo=microsoftpowerbi&logoColor=black)
-![AWS](https://img.shields.io/badge/AWS-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white)
-![Azure](https://img.shields.io/badge/microsoft%20azure-0089D6?style=for-the-badge&logo=microsoft-azure&logoColor=white)
+**Linear programming for multi-cloud cost allocation: find the cheapest mix of
+AWS and Azure resources that still meets every technical, budget and policy
+constraint, and show how much a rule-of-thumb approach leaves on the table.**
 
+[![tests](https://github.com/fruchesko/Cloud-Cost-Optimization-Engine/actions/workflows/tests.yml/badge.svg)](https://github.com/fruchesko/Cloud-Cost-Optimization-Engine/actions/workflows/tests.yml)
+![Python](https://img.shields.io/badge/python-3670A0?style=flat&logo=python&logoColor=ffdd54)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat&logo=fastapi&logoColor=white)
+![Docker](https://img.shields.io/badge/docker-2496ED?style=flat&logo=docker&logoColor=white)
+![Power BI](https://img.shields.io/badge/power_bi-F2C811?style=flat&logo=microsoftpowerbi&logoColor=black)
+![AWS](https://img.shields.io/badge/AWS-FF9900?style=flat&logo=amazon-aws&logoColor=white)
+![Azure](https://img.shields.io/badge/Azure-0089D6?style=flat&logo=microsoft-azure&logoColor=white)
 
-## 🎯 Project Overview
-This engine addresses the "Efficiency Gap" in modern Cloud FinOps. While native tools often fall into the "Heuristic Myopia" trap—prioritizing local, immediate savings—this system utilizes **Linear Programming (LP)** to identify the **Global Optimum** for multi-cloud resource allocation.
+Engineer's thesis project (B.Sc. ICT, Bydgoszcz University of Science and
+Technology, 2026), extended into a working web app with an AI assistant.
 
-## 🛑 The Problem: Cloud Complexity & Heuristic Failure
-Modern cloud infrastructure has scaled beyond the cognitive capacity of manual management.
-* **Cost Inflation**: Organizations face significant financial waste due to stranded capacity and inefficient resource allocation.
-* **The Heuristic Trap**: Current optimization tools typically use "greedy" algorithms that settle for local peaks—saving money on one instance while inadvertently spiking costs in another dimension, such as storage or data transfer.
-* **Constraint Conflict**: Engineering teams prioritize reliability (often leading to over-provisioning), while Finance teams enforce rigid budget caps, creating a friction-filled "Efficiency Gap."
+---
 
-### ⚠️ Research Scope & Data Integrity
-This project is a **mathematical proof-of-concept** conducted in a controlled analytical environment.
-* **Data Nature**: The research utilizes **synthetic telemetry** mapped against real-world AWS and Azure pricing APIs to ensure 100% experimental control.
-* **Validation Status**: While mathematically rigorous, this model **has not been verified in real-world production environments** and does not currently account for the "noise," tagging errors, or unstructured anomalies inherent in raw corporate billing logs.
+## 🔗 Try it live
 
-## 🚀 Key Performance Indicators (KPIs)
-The engine’s efficacy was measured by comparing its deterministic output against standard heuristic baselines across 15 scenarios.
+| Demo | What you can do |
+|---|---|
+| **[Optimization engine](https://lair-server.taild34a63.ts.net/)** | Pick a scenario, change the demand, budget and policy inputs, press Solve and compare the rule-of-thumb baseline with the optimum. The **Needs assistant** chat on the page turns a plain-language description ("we run 300 vCPUs, half must be on Azure…") into suggested settings. |
+| **[API docs](https://lair-server.taild34a63.ts.net/docs)** | The same engine as a JSON API (`GET /scenarios`, `POST /solve`), with interactive Swagger docs. |
+| **[AI gateway chat](https://lair-server.taild34a63.ts.net:8443/)** | A LibreChat front end on a self-hosted LiteLLM gateway, with Claude and GPT models behind one budget-capped endpoint. Login details are available on request. |
 
-* **Global Efficiency**: Achieved a **13.1% ($72.1K)** reduction in Total Cost of Ownership (TCO) for complex enterprise-scale configurations.
-* **Solver Performance**: High-dimensional multi-objective problems were resolved in just **0.0318 seconds**, demonstrating real-time decision-support viability.
-* **Storage ROI**: Identified lifecycle arbitrage and migration opportunities yielding up to a **62.7% TCO reduction**.
-* **Constraint Precision**: Successfully saturated financial and technical boundaries (e.g., utilizing 97.8% of available CAPEX) to minimize operational waste.
+Both demos run on a small home server published through Tailscale Funnel,
+so they may occasionally be offline. Every account and API key has a hard spending
+cap, and requests are rate-limited.
 
-## 📈 Visualized Results & Evidence
+---
 
-The model was stress-tested across three levels of complexity to verify its ability to maintain a global optimum under increasingly conflicting constraints.
+## 🎯 The problem
 
-### 1. Level 1: Isolated Rate Optimization (Scenario 1)
-This baseline test evaluates the engine's ability to balance On-Demand flexibility against Reserved Instance discounts. 
-* **Outcome**: The solver identified the exact saturation point (25 units) required to cover a steady 100 vCPU workload, eliminating the manual "best guess" rounding errors common in heuristic tools.
+Cloud bills are shaped by many interacting choices: On-Demand vs Reserved vs
+Spot pricing, instance shapes, storage tiers, upfront (CAPEX) budgets, risk
+appetite and provider policies. Most tooling and most people optimise these
+one at a time with greedy rules ("reserve the baseline", "keep everything
+hot"). Each rule saves money locally, but together they miss the global
+optimum, and sometimes they break a constraint outright.
+
+This engine models each problem as a **linear program** (PuLP with the CBC
+solver). It minimises total cost of ownership subject to every constraint at
+once, and reports:
+
+- the cost of a **heuristic baseline** (the rule of thumb a team would apply by hand)
+- the cost of the **optimal** allocation and the savings
+- which instances or tiers to buy, and how many
+- which constraints are **binding**, meaning they are the ones actually limiting the cost
+
+## 📊 Results
+
+All numbers come from the code in this repository (`code/Main.py` writes them
+to a CSV; the tests in `tests/` assert the headline figures).
+
+| Scenario | Baseline | Optimum | Savings |
+|---|---:|---:|---:|
+| 1. Rate optimisation (OD vs 1-yr vs 3-yr RI, 3-year TCO) | $79,130 | $76,920 | **2.8%** |
+| 6. Financial right-sizing under a $25K CAPEX cap | $262,800 | $182,524 | **30.5%** |
+| 13. Storage tiering and migration, 500 TB (per month) | $8,875 | $3,310 | **62.7%** |
+| 15. Multi-cloud master problem (3-year TCO) | $552,730 | $480,591 | **13.1% ($72,139)** |
+
+A Scenario 15 solve takes about 0.01 s, so the engine is fast enough for
+interactive what-if analysis.
+
+### Scenario 1: Rate optimisation
+Cover a steady 100 vCPU workload with the cheapest mix of On-Demand and
+Reserved Instances. The optimum is 25 three-year Reserved Instances, against the
+baseline's one-year reservations.
 
 ![Scenario 1 - Rate Optimization](visuals/S1.png)
 
-### 2. Level 2: Advanced Risk & Governance (Scenario 7)
-Moving beyond cost, this scenario introduces a "Risk Budget" limit on Spot instance usage to ensure system stability.
-* **Outcome**: The engine utilized 94% of the allowable risk threshold to drive down unit costs, proving that precise mathematical assignment eliminates the need for expensive, fear-based over-provisioning.
-
-![Scenario 7 - Risk vs Technical Fit](visuals/S7.png)
-
-### 3. Level 3: Storage Lifecycle & ROI (Scenario 13)
-This global optimization scenario calculates the financial break-even point for migrating 180TB of unstructured data across storage tiers.
-* **Outcome**: Identified a massive **62.7% efficiency gain**. The model demonstrated that the one-time migration fee (CAPEX) was offset by monthly savings in under 24 days.
+### Scenario 13: Storage lifecycle and migration
+Place 500 TB across Hot, Cool and Archive tiers so that the data still delivers
+25,000 IOPS and the one-time migration fee stays under $80K. The baseline puts
+half in Hot and half in Cool. The optimum keeps about 69 TB in Hot for IOPS and
+moves the rest to Archive, which cuts the monthly bill by 62.7%. Its migration
+costs $28.4K, against $112.5K for the baseline split.
 
 ![Scenario 13 - Storage ROI](visuals/S13.png)
 
-### 4. Level 3: The Integrated Master Problem (Scenario 15)
-The final test simulates a large-scale enterprise environment subject to simultaneous, conflicting constraints: a $45K CAPEX limit, Spot Risk ceilings, and mandatory Multi-Cloud provider policies.
-* **Outcome**: Achieved the **Global Optimum with 13.1% ($72.1K) total savings**. While standard scripts failed to find a feasible solution within the budget, the LP solver performed global resource arbitration to satisfy all requirements.
+### Scenario 15: The integrated master problem
+vCPU, RAM and IOPS demand across AWS and Azure, subject to:
+- a $45K upfront budget
+- a ceiling of 15% on Spot capacity
+- a policy that at least 35% of vCPUs run on Azure
+
+The siloed baseline sizes only for vCPUs and never uses Spot. The optimum spends
+the whole CAPEX budget on AWS Reserved, keeps the Azure share on memory-heavy
+instances, and uses Spot up to the risk ceiling.
 
 ![Scenario 15 - Master Optimization](visuals/S15.png)
 
-* ## 🧠 Core Technical Architecture
-The engine treats cloud infrastructure as a multi-dimensional solution space governed by linear inequalities. By navigating the polytope of feasible solutions, it identifies the absolute mathematical floor of expenditure without compromising system resilience.
-
-* **Optimization Engine**: Built in **Python** using the **PuLP** library to model objective functions and constraints.
-* **Algorithmic Core**: Utilizes the **Simplex Algorithm** to search for a global optimum, delegating heavy computation to high-performance C-solvers (CBC/GLPK).
-* **Intelligence Layer**: **Microsoft Power BI** (integrated via DAX) serves as the visualization frontend, transforming raw optimization vectors into actionable business intelligence.
+The full thesis (all 15 scenarios, method and discussion) is in
+[`docs/`](docs/), together with the Power BI dashboard (`.pbix`).
 
 ---
 
-## 📂 Repository Structure
-* **/code**: Modular Python scripts implementing the optimization logic for all 15 experimental scenarios.
-* **/docs**: Contains the full digital version of the Engineer's Thesis (PDF) and the interactive Power BI (.pbix) dashboard files.
-* **/visuals**: High-resolution screenshots of the analytical dashboards and performance benchmarks.
-* **/engine**: Scenarios 1, 13 and 15 as importable functions with parameters (thesis values as defaults).
-* **/app**: Web app and HTTP API on top of `/engine`.
-* **/tests**: pytest suite for the engine and the app.
+## 🧠 How it's built
+
+```
+engine/   Scenarios 1, 13, 15 as pure functions: inputs as parameters (thesis
+          values as defaults) → structured result (costs, choices, binding constraints)
+app/      FastAPI web app and JSON API on top of engine/
+          - pydantic validation with a min/max for every input
+          - each solve runs in a subprocess with a hard timeout
+          - per-visitor rate limits, security headers (CSP, HSTS), 64 KB body cap
+          - Needs assistant: an LLM call with a tool schema; its suggestions are
+            validated against the same ranges as /solve before the page offers them
+tests/    pytest suite (engine numbers, API validation, infeasible inputs,
+          timeouts, security headers, assistant with a fake model); runs in CI
+code/     the original thesis scripts for all 15 scenarios (unchanged logic)
+docs/     thesis PDF and Power BI dashboard
+visuals/  dashboard screenshots
+```
+
+### The AI gateway behind the demos
+The Needs assistant and the chat demo both call models through a self-hosted
+**LiteLLM** gateway rather than calling providers directly. It provides:
+
+- **One endpoint for every model:** Claude Opus, Sonnet and Haiku plus GPT models,
+  with fallbacks between providers when one is unavailable.
+- **Spending caps:** separate budgets per person and per application key, a
+  monthly cap per provider and a global cap.
+- **PII masking:** emails, phone numbers, IBANs, card numbers and cloud or API
+  keys are masked before a prompt leaves the server.
+- **Isolation:** the gateway is not reachable from the internet. Only the web app
+  and the chat front end are published, and both sit behind TLS and security
+  headers.
+
+The assistant uses a small, cheap model (`gpt-6-luna`) and is limited to 20
+messages per visitor per hour.
 
 ---
 
-## 🛠️ Replication Protocol
+## 🛠️ Run it yourself
 
-### Local (Python 3)
+### Web app (Docker)
 ```bash
 git clone https://github.com/fruchesko/Cloud-Cost-Optimization-Engine.git
 cd Cloud-Cost-Optimization-Engine
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-cd code
-python Main.py
+docker compose up -d --build          # then open http://localhost:8090
 ```
-The engine processes all 15 scenarios in sequence and writes the results to `Diploma_Optimization_Results_FINAL.csv` in the `code` directory.
+The compose file expects an external Docker network called `ai-poc`, which is
+the one the LiteLLM gateway runs on. On a machine without the gateway, create
+the network once with `docker network create ai-poc`.
 
-### Google Colab
-1. **Install Dependencies**: Upload `requirements.txt` and run `!pip install -r requirements.txt` (installs `pandas` and `pulp<3`).
-2. **Environment Setup**: Upload all `.py` files from the `/code` directory (or a compressed `project.zip` of them, then `!unzip -o project.zip`) to your Colab session.
-3. **Execution**: Run `!python Main.py` (the file name is case-sensitive). The results are written to `Diploma_Optimization_Results_FINAL.csv`.
-
----
-
-## 🖥️ Web App
-
-A small web page and API for Scenarios 1, 13 and 15: adjust the inputs, solve, and
-compare the heuristic baseline with the optimum.
-
+### Web app (Python)
 ```bash
-docker compose up -d --build      # then open http://<server>:8090
-```
-
-Or without Docker:
-```bash
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements-app.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8090
+uvicorn app.main:app --port 8090
 ```
+
+The Needs assistant is optional. To turn it on, put a LiteLLM (OpenAI-compatible)
+key in `.env` as `LITELLM_API_KEY`; see `.env.example`. Without a key the
+assistant is hidden and everything else works.
 
 | Endpoint | |
 |---|---|
-| `GET /` | the web page |
 | `GET /scenarios` | scenarios with each parameter's range and default |
 | `POST /solve` | `{"scenario": "scenario_15", "params": {"max_capex": 60000}}`; omitted parameters use the thesis values |
-| `POST /assistant` | `{"messages": [{"role": "user", "content": "..."}], "scenario": "...", "params": {...}}` → reply and validated suggestion |
+| `POST /assistant` | chat messages in, reply plus a validated settings suggestion out |
 | `GET /docs` | interactive API documentation |
 
-`POST /solve` returns 422 with `"error": "infeasible"` when no allocation meets the
-constraints, 422 with field details for out-of-range inputs, and 504 if the solver
-runs longer than `SOLVER_TIMEOUT_SECONDS` (default 10). `allowed_instances` limits
-the types the optimizer may use; the baseline keeps its standard types.
+`/solve` returns 422 `"infeasible"` when no allocation meets the constraints,
+422 with field details for out-of-range inputs, and 504 if the solver exceeds
+`SOLVER_TIMEOUT_SECONDS` (default 10).
 
-### Needs assistant
+### Tests
+```bash
+pip install -r requirements-dev.txt && pytest
+```
 
-A chat window ("This helps you better understand your needs") turns a client's
-description into suggested settings that can be applied with one click. It calls
-`gpt-6-luna` through a LiteLLM gateway: put the gateway key in `.env` as
-`LITELLM_API_KEY` (see `.env.example`); without it the assistant is hidden.
-Suggestions are validated against the same ranges as `/solve`. Limits: 20
-messages per visitor per hour, 300 per day, 600 tokens per reply, and the key's
-own budget in LiteLLM.
-
-The app has no login. Set `COST_ENGINE_PORT` to use a port other than 8090, and
-`FORWARDED_ALLOW_IPS` to your reverse proxy's address so per-visitor limits see
-real client addresses. Every response carries security headers (CSP, HSTS,
-X-Frame-Options) and request bodies over 64 KB (`MAX_BODY_BYTES`) get a 413.
-
-Tests: `pip install -r requirements-dev.txt && pytest`.
+### Original thesis scripts (all 15 scenarios)
+```bash
+pip install -r requirements.txt
+cd code && python Main.py             # writes Diploma_Optimization_Results_FINAL.csv
+```
+This also runs in Google Colab: upload `requirements.txt` and the `code/*.py`
+files, then run `!pip install -r requirements.txt` followed by `!python Main.py`.
 
 ---
 
-## 👤 Author Information
-* **Author**: Kyrylo Brykov
-* **Degree**: Bachelor of Science in Information and Communication Technology (ICT)
-* **Institution**: Bydgoszcz University of Science and Technology (Politechnika Bydgoska), 2026
-* **Specialization**: Deterministic Optimization, Cloud FinOps, and Business Intelligence Analytics
+## ⚠️ Scope and limitations
 
----
+- This is a **mathematical proof of concept**. Workloads are synthetic, priced
+  with AWS and Azure list prices. It has not been validated against real
+  production billing data, which has tagging gaps, anomalies and discounts that
+  are not modelled here.
+- Each baseline is a deliberately simple rule of thumb, taken from the thesis.
+  Savings measure the gap to that rule, not to a skilled FinOps team.
+- `code/scenario_07.py` (Spot risk vs technical fit) currently contains a copy of
+  Scenario 6, so the Scenario 7 thesis results can't be reproduced from this
+  repository.
+
+## 👤 Author
+
+**Kyrylo Brykov**, B.Sc. Information and Communication Technology,
+Bydgoszcz University of Science and Technology (Politechnika Bydgoska), 2026.
+Interests: optimisation, cloud FinOps, AI platform engineering and BI analytics.
+
+MIT License, see [LICENSE](LICENSE).
