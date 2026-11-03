@@ -183,6 +183,26 @@ files, then run `!pip install -r requirements.txt` followed by `!python Main.py`
 
 ---
 
+## 📝 What changed since the thesis
+
+The thesis version is tagged
+[`thesis-v1`](https://github.com/fruchesko/Cloud-Cost-Optimization-Engine/tree/thesis-v1).
+Everything after it builds on that code without changing its scenario logic
+or numbers.
+
+| Change | What it adds |
+|---|---|
+| **Runs from a fresh checkout** (`thesis-v1`) | Fixed the broken module import in `Main.py` and the function name in `scenario_07.py`. Added `requirements.txt` (`pandas`, `pulp<3`) and corrected the run instructions and output file name. Checked in a clean virtualenv that Scenario 15 gives $72,138.60 (13.1%), and scanned the code and history for secrets with gitleaks (none found). |
+| **`engine/` package** | Scenarios 1 and 15 rewritten as functions with parameters (thesis values as defaults). Each returns a structured result: baseline cost, optimal cost, savings, chosen resources and binding constraints. |
+| **Tests and CI** | A pytest suite that asserts the thesis numbers and covers infeasible inputs. GitHub Actions runs it on Python 3.10 and 3.12 for every push. |
+| **Web app and API** (`app/`) | FastAPI with `GET /scenarios` and `POST /solve`. Every input is validated against a range, and each solve runs with a timeout. A single-page UI shows the baseline and the optimum side by side, with a table of chosen resources and a clear message when the problem is infeasible. Dockerfile and docker-compose included. |
+| **Needs assistant** | A chat window that turns a client's description into suggested settings, applied with one click. It uses `gpt-6-luna` through the LiteLLM gateway, with a budget and rate limits; suggestions are validated against the same ranges as `/solve`. |
+| **Security hardening** | Security headers on every response (CSP, HSTS, X-Frame-Options), no inline scripts, a 64 KB request-body cap (also for chunked uploads), per-visitor rate limits, a read-only container with no Linux capabilities, and HTTPS through Tailscale Funnel. |
+| **Scenario 13** (storage migration) | Ported into `engine/` and the web app, with GB-based tiers, a monthly cost view and a migration-cost comparison. Reproduces the thesis figures: $8,875 to $3,310 per month (62.7%). |
+| **README** | Live demo links, a results table taken from the code, and corrections to claims the code did not support: Scenario 13 is 500 TB, not 180 TB, and the old "under 24 days" payback figure was wrong. |
+
+---
+
 ## ⚠️ Scope and limitations
 
 - This is a **mathematical proof of concept**. Workloads are synthetic, priced
